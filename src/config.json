@@ -1,0 +1,17 @@
+{
+  "auto_proxy": false,
+  "pac": {
+    "enable": false,
+    "url": ""
+  },
+  "manual": {
+    "enable": true,
+    "host": "127.0.0.1",
+    "port": 1080,
+    "bypass": [
+      "localhost",
+      "127.0.0.*",
+      "192.168.*"
+    ]
+  }
+}
