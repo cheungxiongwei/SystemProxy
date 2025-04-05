@@ -24,6 +24,22 @@ int main()
 }
 ```
 
+```macos
+# ss_on.sh
+/usr/sbin/networksetup -setwebproxystate Wi-Fi on;
+/usr/sbin/networksetup -setsecurewebproxystate Wi-Fi on;
+/usr/sbin/networksetup -setsocksfirewallproxystate Wi-Fi on;
+
+/usr/sbin/networksetup -setwebproxy Wi-Fi 192.168.3.105 1080;
+/usr/sbin/networksetup -setsecurewebproxy Wi-Fi 192.168.3.105 1080;
+/usr/sbin/networksetup -setsocksfirewallproxy Wi-Fi 192.168.3.105 1080;
+
+# ss_off.sh
+/usr/sbin/networksetup -setwebproxystate Wi-Fi off;
+/usr/sbin/networksetup -setsecurewebproxystate Wi-Fi off;
+/usr/sbin/networksetup -setsocksfirewallproxystate Wi-Fi off;
+```
+
 ```json
 
 ```

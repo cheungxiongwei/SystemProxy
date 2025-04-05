@@ -1,6 +1,6 @@
-﻿#include <format>
+﻿#include "SystemProxy.h"
+#include <format>
 #include <print>
-#include "SystemProxy.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
@@ -156,6 +156,27 @@ static bool macos_set_proxy_config(SystemProxy::Config* config)
     if (!config)
         return false;
 
+    // Query the primary service name
+    char buffer[128];
+    std::string service_name;
+    FILE* pipe = popen(
+        "/usr/sbin/networksetup -listnetworkserviceorder | grep 'Hardware Port' | awk -F'[(|)]' '{print $2}'", "r");
+    if (pipe)
+    {
+        while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+        {
+            service_name += buffer;
+        }
+        pclose(pipe);
+
+        // Trim trailing newline
+        if (!service_name.empty() && service_name.back() == '\n')
+            service_name.pop_back();
+    }
+
+    if (service_name.empty())
+        return false;
+
     std::string command;
 
     if (config->mode & SystemProxy::Manual)
@@ -163,7 +184,7 @@ static bool macos_set_proxy_config(SystemProxy::Config* config)
         command = std::format(
             "/usr/sbin/networksetup -setwebproxy \"{}\" {} {} && /usr/sbin/networksetup -setsecurewebproxy \"{}\" {} "
             "{}",
-            config->service_name, config->host, config->port, config->service_name, config->host, config->port);
+            service_name, config->host, config->port, service_name, config->host, config->port);
 
         if (!config->exceptions.empty())
         {
@@ -176,25 +197,24 @@ static bool macos_set_proxy_config(SystemProxy::Config* config)
             if (!exceptions_list.empty())
                 exceptions_list.pop_back();
 
-            command += std::format(" && /usr/sbin/networksetup -setproxybypassdomains \"{}\" {}", config->service_name,
+            command += std::format(" && /usr/sbin/networksetup -setproxybypassdomains \"{}\" {}", service_name,
                                    exceptions_list);
         }
     }
     else if (config->mode & SystemProxy::Pac)
     {
-        command =
-            std::format("/usr/sbin/networksetup -setautoproxyurl \"{}\" \"{}\"", config->service_name, config->pac_url);
+        command = std::format("/usr/sbin/networksetup -setautoproxyurl \"{}\" \"{}\"", service_name, config->pac_url);
     }
     else if (config->mode & SystemProxy::Auto)
     {
-        command = std::format("/usr/sbin/networksetup -setautoproxystate \"{}\" on", config->service_name);
+        command = std::format("/usr/sbin/networksetup -setautoproxystate \"{}\" on", service_name);
     }
     else
     {
         command = std::format(
             "/usr/sbin/networksetup -setwebproxystate \"{}\" off && /usr/sbin/networksetup -setsecurewebproxystate "
             "\"{}\" off && /usr/sbin/networksetup -setautoproxystate \"{}\" off",
-            config->service_name, config->service_name, config->service_name);
+            service_name, service_name, service_name);
     }
 
     return (std::system(command.c_str()) == 0);
