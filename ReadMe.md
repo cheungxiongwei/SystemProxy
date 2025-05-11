@@ -13,12 +13,12 @@ programmatically. It can be used in tools like v2ray, trojan-go, and other simil
 
 int main()
 {
-    auto proxy = SystemProxy::Builder().SetMode(SystemProxy::Pac).SetPacUrl("http://example.com/proxy.pac").Build();
-    proxy->ApplyConfig();
+    auto proxy = SystemProxy::Builder().setMode(SystemProxy::Pac).setPacUrl("http://example.com/proxy.pac").build();
+    proxy->apply();
 
     // 基于现有配置创建新配置
-    auto newBuilder = proxy->GetBuilder();
-    auto modifiedProxy = newBuilder->SetMode(SystemProxy::Manual).SetProxy("localhost", "8080").Build();
+    auto newBuilder = proxy->getBuilder();
+    auto modifiedProxy = newBuilder->setMode(SystemProxy::Manual).setProxy("localhost", "8080").build();
 
     return 0;
 }
@@ -41,5 +41,21 @@ int main()
 ```
 
 ```json
-
+{
+  "auto_proxy": false,
+  "pac": {
+    "enable": false,
+    "url": ""
+  },
+  "manual": {
+    "enable": true,
+    "host": "127.0.0.1",
+    "port": 1080,
+    "bypass": [
+      "localhost",
+      "127.0.0.*",
+      "192.168.*"
+    ]
+  }
+}
 ```
