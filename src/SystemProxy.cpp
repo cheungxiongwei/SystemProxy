@@ -9,7 +9,7 @@
 
 static bool windows_set_proxy_config(SystemProxy::Config* config)
 {
-    INTERNET_PER_CONN_OPTIONA option[4];
+    INTERNET_PER_CONN_OPTIONA option[4]={0};
     option[0].dwOption = INTERNET_PER_CONN_PROXY_SERVER;
     option[1].dwOption = INTERNET_PER_CONN_PROXY_BYPASS;
     option[2].dwOption = INTERNET_PER_CONN_AUTOCONFIG_URL;
@@ -32,7 +32,7 @@ static bool windows_set_proxy_config(SystemProxy::Config* config)
     }
     if (config->mode & SystemProxy::Pac)
     {
-        option[2].Value.pszValue = config->pac_url.data();
+        option[2].Value.pszValue = config->pacUrl.data();
         option[3].Value.dwValue |= PROXY_TYPE_AUTO_PROXY_URL;
     }
     if (config->mode & SystemProxy::Auto)
@@ -49,6 +49,8 @@ static bool windows_set_proxy_config(SystemProxy::Config* config)
     list.dwOptionError = 0;
     list.pOptions = option;
 
+    InternetSetOptionA(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &list, dwBufSize);
+    InternetSetOptionA(nullptr, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, NULL, NULL);
 
     if (InternetSetOptionA(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &list, dwBufSize) &&
         InternetSetOptionA(nullptr, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, NULL, NULL) &&
@@ -153,9 +155,6 @@ static bool windows_set_proxy_config(SystemProxy::Config* config)
 
 static bool macos_set_proxy_config(SystemProxy::Config* config)
 {
-    if (!config)
-        return false;
-
     // Query the primary service name
     char buffer[128];
     std::string service_name;
@@ -203,7 +202,7 @@ static bool macos_set_proxy_config(SystemProxy::Config* config)
     }
     else if (config->mode & SystemProxy::Pac)
     {
-        command = std::format("/usr/sbin/networksetup -setautoproxyurl \"{}\" \"{}\"", service_name, config->pac_url);
+        command = std::format("/usr/sbin/networksetup -setautoproxyurl \"{}\" \"{}\"", service_name, config->pacUrl);
     }
     else if (config->mode & SystemProxy::Auto)
     {
@@ -223,19 +222,16 @@ static bool macos_set_proxy_config(SystemProxy::Config* config)
 #endif
 
 // windows,linux,macos,ios,android
-bool SystemProxy::ApplyConfig()
+bool SystemProxy::apply()
 {
-    if (!m_config)
-        return false;
-
 #if defined(_WIN32) || defined(_WIN64)
-    return windows_set_proxy_config(m_config.get());
+    return windows_set_proxy_config(&config_);
 #elif defined(__linux__)
     // Implement Linux-specific proxy configuration setting
-    return linux_set_proxy_config(m_config.get());
+    return linux_set_proxy_config(&config_);
 #elif defined(__APPLE__)
     // Implement macOS-specific proxy configuration setting
-    return macos_set_proxy_config(m_config.get());
+    return macos_set_proxy_config(&config_);
 #else
     std::runtime_error("Unsupported platform");
     return false;  // Unsupported platform

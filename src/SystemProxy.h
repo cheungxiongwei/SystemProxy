@@ -32,18 +32,13 @@
 class SystemProxy
 {
 public:
-    class Builder;
-
-    // 公共枚举定义，方便外部使用
-    enum Mode : uint8_t
+    enum Mode
     {
         NoProxy = 0,
         Auto = 1 << 0,
         Pac = 1 << 1,
         Manual = 1 << 2
     };
-
-    // 枚举位运算操作符
     friend inline Mode operator|(Mode a, Mode b)
     {
         return static_cast<Mode>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
@@ -54,122 +49,79 @@ public:
     struct Config
     {
         Mode mode{NoProxy};  // 代理模式
-        std::string pac_url;  // PAC 脚本 URL
-        std::string host;  // 代理服务器地址
-        std::string port;  // 代理服务器端口
+        std::string pacUrl;  // PAC 脚本 URL
+        std::string host{"127.0.0.1"};  // 代理服务器地址
+        std::string port{"1080"};  // 代理服务器端口
         std::vector<std::string> exceptions;  // 例外列表（不使用代理的地址）
     };
+    class Builder;
 
-    // 禁用复制构造与复制赋值
-    SystemProxy(const SystemProxy&) = delete;
-    SystemProxy& operator=(const SystemProxy&) = delete;
-    ~SystemProxy() = default;
+    bool apply();
 
-    /**
-     * @brief 将当前配置导出为JSON字符串
-     * @return JSON字符串
-     */
-    std::string ToJson() const { return ""; }
-
-    /**
-     * @brief 从JSON字符串导入配置
-     * @param jsonStr JSON字符串
-     * @return 是否成功导入
-     */
-    bool FromJson(const std::string& jsonStr) { return false; }
-
-    /**
-     * @brief 应用当前配置到系统
-     * @return 是否成功应用
-     */
-    bool ApplyConfig();
-
-    /**
-     * @brief 创建一个新的Builder对象来修改现有配置
-     * @return 指向新Builder的唯一指针
-     */
-    std::unique_ptr<Builder> GetBuilder();
-
+    std::unique_ptr<Builder> getBuilder();
 private:
-    std::unique_ptr<Config> m_config;
+    Config config_;
 
-    // 私有构造函数，只允许Builder构建
-    explicit SystemProxy(std::unique_ptr<Config> config) : m_config(std::move(config)) {}
+    SystemProxy() = default;
 
-    friend class Builder;
+    static std::unique_ptr<SystemProxy> create() noexcept {
+        return std::unique_ptr<SystemProxy>(new(std::nothrow) SystemProxy());
+    }
 };
 
 class SystemProxy::Builder
 {
 public:
-    // 默认构造函数，创建新的配置
-    Builder() : m_config(std::make_unique<Config>()) {}
+    explicit Builder() noexcept : context_(create()), config_(context_->config_) {}
+    explicit Builder(SystemProxy* parent) noexcept : context_(parent), config_(context_->config_) {}
 
-    // 从现有SystemProxy创建构建器的构造函数
-    explicit Builder(const SystemProxy* parent)
+    Builder& setMode(Mode mode)
     {
-        if (parent && parent->m_config)
-        {
-            m_config = std::make_unique<Config>(*parent->m_config);
-        }
-        else
-        {
-            m_config = std::make_unique<Config>();
-        }
-    }
-
-    Builder(const Builder&) = delete;
-    Builder& operator=(const Builder&) = delete;
-    ~Builder() = default;
-
-    Builder& SetMode(Mode mode)
-    {
-        m_config->mode = mode;
+        config_.mode = mode;
         return *this;
     }
 
-    Builder& SetPacUrl(std::string url)
+    Builder& setPacUrl(std::string url)
     {
-        m_config->pac_url = std::move(url);
+        config_.pacUrl = std::move(url);
         return *this;
     }
 
-    Builder& SetProxy(std::string host, std::string port)
+    Builder& setProxy(std::string host, std::string port)
     {
-        m_config->host = std::move(host);
-        m_config->port = std::move(port);
+        config_.host = std::move(host);
+        config_.port = std::move(port);
         return *this;
     }
 
-    Builder& SetExceptions(std::vector<std::string> exceptions)
+    Builder& setExceptions(std::vector<std::string> exceptions)
     {
-        m_config->exceptions = std::move(exceptions);
+        config_.exceptions = std::move(exceptions);
         return *this;
     }
 
-    Builder& AddException(std::string exception)
+    Builder& addException(std::string exception)
     {
-        m_config->exceptions.emplace_back(std::move(exception));
+        config_.exceptions.emplace_back(std::move(exception));
         return *this;
     }
 
-    Builder& RemoveException(const std::string& exception)
+    Builder& removeException(const std::string& exception)
     {
-        auto& exceptions = m_config->exceptions;
+        auto& exceptions = config_.exceptions;
         auto iter = std::find(exceptions.begin(), exceptions.end(), exception);
         if (iter != exceptions.end())
             exceptions.erase(iter);
         return *this;
     }
 
-    std::unique_ptr<SystemProxy> Build() { return std::unique_ptr<SystemProxy>(new SystemProxy(std::move(m_config))); }
-
+    std::unique_ptr<SystemProxy> build() { return std::move(context_); }
 private:
-    std::unique_ptr<Config> m_config;
+    std::unique_ptr<SystemProxy> context_;
+    Config& config_;
 };
 
-// 定义在类外部的成员函数实现
-inline std::unique_ptr<SystemProxy::Builder> SystemProxy::GetBuilder()
+inline std::unique_ptr<SystemProxy::Builder> SystemProxy::getBuilder()
 {
     return std::make_unique<Builder>(this);
 }

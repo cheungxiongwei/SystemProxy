@@ -4,12 +4,12 @@
 
 int main()
 {
-    auto proxy = SystemProxy::Builder().SetMode(SystemProxy::Pac).SetPacUrl("http://example.com/proxy.pac").Build();
-    proxy->ApplyConfig();
+    auto proxy = SystemProxy::Builder().setMode(SystemProxy::Pac).setPacUrl("http://example.com/proxy.pac").build();
+    proxy->apply();
 
     // 基于现有配置创建新配置
-    auto newBuilder = proxy->GetBuilder();
-    auto modifiedProxy = newBuilder->SetMode(SystemProxy::Manual).SetProxy("localhost", "8080").Build();
+    auto newBuilder = proxy->getBuilder();
+    auto modifiedProxy = newBuilder->setMode(SystemProxy::Manual).setProxy("localhost", "8080").build();
 
     return 0;
 }

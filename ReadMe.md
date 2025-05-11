@@ -1,6 +1,6 @@
-# SystemProxyConfig
+# SystemProxy
 
-`SystemProxyConfig` is a Windows system proxy configuration utility that allows you to set system proxy settings
+`SystemProxy` is a Windows system proxy configuration utility that allows you to set system proxy settings
 programmatically. It can be used in tools like v2ray, trojan-go, and other similar tools that require setting the
 `System IE proxy`.
 
@@ -9,7 +9,7 @@ programmatically. It can be used in tools like v2ray, trojan-go, and other simil
 ```c++
 #include <print>
 #include <string>
-#include "SystemProxyConfig.h"
+#include "SystemProxy.h"
 
 int main()
 {
