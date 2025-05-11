@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 class SystemProxy
@@ -62,53 +63,58 @@ public:
 private:
     Config config_;
 
-    SystemProxy() = default;
+    explicit SystemProxy() = default;
+    explicit SystemProxy(Config config):config_(std::move(config)){}
 
     static std::unique_ptr<SystemProxy> create() noexcept {
         return std::unique_ptr<SystemProxy>(new(std::nothrow) SystemProxy());
+    }
+
+    static std::unique_ptr<SystemProxy> create(const Config& config) noexcept {
+        return std::unique_ptr<SystemProxy>(new(std::nothrow) SystemProxy(config));
     }
 };
 
 class SystemProxy::Builder
 {
 public:
-    explicit Builder() noexcept : context_(create()), config_(context_->config_) {}
-    explicit Builder(SystemProxy* parent) noexcept : context_(parent), config_(context_->config_) {}
+    explicit Builder() noexcept : context_(create()) {}
+    explicit Builder(const Config& config) noexcept : context_(create(config)) {}
 
     Builder& setMode(Mode mode)
     {
-        config_.mode = mode;
+        context_->config_.mode = mode;
         return *this;
     }
 
     Builder& setPacUrl(std::string url)
     {
-        config_.pacUrl = std::move(url);
+        context_->config_.pacUrl = std::move(url);
         return *this;
     }
 
     Builder& setProxy(std::string host, std::string port)
     {
-        config_.host = std::move(host);
-        config_.port = std::move(port);
+        context_->config_.host = std::move(host);
+        context_->config_.port = std::move(port);
         return *this;
     }
 
     Builder& setExceptions(std::vector<std::string> exceptions)
     {
-        config_.exceptions = std::move(exceptions);
+        context_->config_.exceptions = std::move(exceptions);
         return *this;
     }
 
     Builder& addException(std::string exception)
     {
-        config_.exceptions.emplace_back(std::move(exception));
+        context_->config_.exceptions.emplace_back(std::move(exception));
         return *this;
     }
 
     Builder& removeException(const std::string& exception)
     {
-        auto& exceptions = config_.exceptions;
+        auto& exceptions = context_->config_.exceptions;
         auto iter = std::find(exceptions.begin(), exceptions.end(), exception);
         if (iter != exceptions.end())
             exceptions.erase(iter);
@@ -118,10 +124,9 @@ public:
     std::unique_ptr<SystemProxy> build() { return std::move(context_); }
 private:
     std::unique_ptr<SystemProxy> context_;
-    Config& config_;
 };
 
 inline std::unique_ptr<SystemProxy::Builder> SystemProxy::getBuilder()
 {
-    return std::make_unique<Builder>(this);
+    return std::make_unique<Builder>(this->config_);
 }
